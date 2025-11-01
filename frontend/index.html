@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Storage - Admin Access</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Page -->
+    <div class="login-container" id="loginPage">
+        <div class="login-box">
+            <div class="login-icon">🔐</div>
+            <h1>Admin Access</h1>
+            <p class="subtitle">Enter your credentials to continue</p>
+            
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            <div class="loading" id="loginLoading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Authenticating...</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Enter username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn" id="loginBtn">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Storage Page -->
+    <div class="storage-page" id="storagePage">
+        <div class="container">
+            <header>
+                <div class="header-left">
+                    <h1>☁️ Cloud Storage</h1>
+                    <p class="subtitle">Secure file storage with NeonDB</p>
+                </div>
+                <div class="header-right">
+                    <span class="admin-name" id="adminName">👤 Admin</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </header>
+
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📤</div>
+                    <h2>Drag & Drop Files Here</h2>
+                    <p style="color: #666; margin: 15px 0;">or</p>
+                    <button class="btn" onclick="document.getElementById('fileInput').click()">
+                        Choose Files
+                    </button>
+                    <input type="file" id="fileInput" multiple>
+                    <p style="color: #999; margin-top: 20px; font-size: 0.9em;">
+                        Supports all file types: documents, images, videos, apps, and more
+                    </p>
+                </div>
+                <div class="loading" id="uploadLoading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #666;">Uploading files...</p>
+                </div>
+            </div>
+
+            <div class="files-section">
+                <div class="section-header">
+                    <h2>My Files</h2>
+                    <div class="storage-info" id="storageInfo">0 files stored</div>
+                </div>
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search files...">
+                <div class="loading" id="filesLoading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #666;">Loading files...</p>
+                </div>
+                <div class="file-grid" id="fileGrid"></div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="script.js"
+</html>
