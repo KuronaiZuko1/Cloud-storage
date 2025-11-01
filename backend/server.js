@@ -13,7 +13,29 @@ const PORT = process.env.PORT || 8301;
 const sql = neon(process.env.DATABASE_URL);
 
 // Middleware
-app.use(cors());
+// CORS Configuration
+const allowedOrigins = [
+  'http://localhost:8080',
+  'http://localhost:8301',
+  'http://127.0.0.1:8080',
+  'https://dazzling-bonbon-1e5bc9.netlify.app'  // Your Netlify URL
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
