@@ -1,5 +1,9 @@
  // API Configuration - Replace with your actual API endpoints
+<<<<<<< HEAD
         const API_BASE_URL = 'https://cloud-storage-co.up.railway.app/api'; // Change this to your backend URL
+=======
+        const API_BASE_URL = 'cloud-storage-co.up.railway.app'; // Change this to your backend URL
+>>>>>>> e1fbe9e95d97a39fac7b61737c5b13217988d959
         
         let currentUser = null;
         let authToken = null;
