@@ -9,7 +9,14 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8301;
 
-// Database connection
+// Database connection with better error handling
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL is not set!');
+  console.error('Available env vars:', Object.keys(process.env).join(', '));
+  process.exit(1);
+}
+
+console.log('✅ DATABASE_URL is set, length:', process.env.DATABASE_URL.length);
 const sql = neon(process.env.DATABASE_URL);
 
 // Middleware
