@@ -25,4 +25,5 @@ build/
 
 # Test files
 change-password.js
+add_multiple_admin.js
 test-db.js
