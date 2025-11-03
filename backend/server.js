@@ -25,7 +25,7 @@ const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:8301',
   'http://127.0.0.1:8080',
-  'https://dazzling-bonbon-1e5bc9.netlify.app'  // Your Netlify URL
+  'cloud-storage-ui.netlify.app',// Your Netlify URL
 ];
 
 app.use(cors({
