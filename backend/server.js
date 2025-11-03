@@ -22,10 +22,7 @@ const sql = neon(process.env.DATABASE_URL);
 // Middleware
 // CORS Configuration
 const allowedOrigins = [
-  'http://localhost:8080',
-  'http://localhost:8301',
-  'http://127.0.0.1:8080',
-  'cloud-storage-ui.netlify.app',// Your Netlify URL
+  'https://cloud-storage-ui.netlify.app',// Your Netlify URL
 ];
 
 app.use(cors({
