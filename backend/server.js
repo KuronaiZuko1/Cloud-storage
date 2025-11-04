@@ -271,11 +271,18 @@ app.get('/api/files', authenticateToken, async (req, res) => {
   }
 });
 
-// Download file
+// Download file - FIXED VERSION
 app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
   try {
     const files = await sql`
-      SELECT * FROM files
+      SELECT 
+        id, 
+        name, 
+        original_name, 
+        mime_type, 
+        size,
+        encode(file_data, 'base64') as file_data_base64
+      FROM files
       WHERE id = ${req.params.id} AND user_id = ${req.user.id}
     `;
 
@@ -285,23 +292,17 @@ app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
 
     const file = files[0];
     
-    // Convert BYTEA to proper Buffer
-    let fileBuffer;
-    if (Buffer.isBuffer(file.file_data)) {
-      fileBuffer = file.file_data;
-    } else if (file.file_data instanceof Uint8Array) {
-      fileBuffer = Buffer.from(file.file_data);
-    } else {
-      fileBuffer = Buffer.from(file.file_data, 'binary');
-    }
+    // Convert base64 back to buffer
+    const fileBuffer = Buffer.from(file.file_data_base64, 'base64');
 
-    // Set proper headers
+    // Set headers
     res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
     res.setHeader('Content-Length', fileBuffer.length);
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);
+    res.setHeader('Cache-Control', 'no-cache');
     
-    // Send the buffer
-    res.end(fileBuffer);
+    // Send buffer
+    res.end(fileBuffer, 'binary');
   } catch (error) {
     console.error('Download error:', error);
     res.status(500).json({ message: 'Failed to download file' });
