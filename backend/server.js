@@ -9,7 +9,7 @@ const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8301;
 
 // =============================
 // DATABASE CONNECTION
@@ -141,66 +141,74 @@ async function initializeDatabase() {
 // AUTH ROUTES
 // =============================
 
-app.post('/api/auth/login', async (req,res)=>{
+app.post('/api/auth/login', async (req, res) => {
 
   try {
 
-    const {username,password} = req.body;
+    const { username, password } = req.body;
 
     const users = await sql`
     SELECT * FROM users WHERE username=${username}
     `;
 
-    if(users.length === 0){
-      return res.status(401).json({message:'Invalid credentials'});
+    if (users.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const user = users[0];
 
-    const valid = await bcrypt.compare(password,user.password);
+    const valid = await bcrypt.compare(password, user.password);
 
-    if(!valid){
-      return res.status(401).json({message:'Invalid credentials'});
+    if (!valid) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const token = jwt.sign(
-      {id:user.id,username:user.username},
+      { id: user.id, username: user.username },
       JWT_SECRET,
-      {expiresIn:'24h'}
+      { expiresIn: '24h' }
     );
 
     res.json({
       token,
-      user:{
-        id:user.id,
-        username:user.username,
-        email:user.email
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
       }
     });
 
-  } catch(err){
+  } catch (err) {
     console.error(err);
-    res.status(500).json({message:'Server error'});
+    res.status(500).json({ message: 'Server error' });
   }
 
 });
 
-app.get('/api/auth/verify', authenticateToken, async (req,res)=>{
+// FIX 3: Added try/catch to prevent unhandled crash on DB error
+app.get('/api/auth/verify', authenticateToken, async (req, res) => {
 
-  const user = await sql`
-  SELECT id,username,email FROM users WHERE id=${req.user.id}
-  `;
+  try {
 
-  if(user.length===0){
-    return res.status(404).json({message:'User not found'});
+    const user = await sql`
+    SELECT id,username,email FROM users WHERE id=${req.user.id}
+    `;
+
+    if (user.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ user: user[0] });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  res.json({user:user[0]});
 
 });
 
-app.post('/api/auth/logout', authenticateToken, (req,res)=>{
-  res.json({message:'Logged out'});
+app.post('/api/auth/logout', authenticateToken, (req, res) => {
+  res.json({ message: 'Logged out' });
 });
 
 // =============================
@@ -208,15 +216,15 @@ app.post('/api/auth/logout', authenticateToken, (req,res)=>{
 // =============================
 
 // Upload file
-app.post('/api/files/upload', authenticateToken, upload.single('file'), async (req,res)=>{
+app.post('/api/files/upload', authenticateToken, upload.single('file'), async (req, res) => {
 
-  try{
+  try {
 
-    if(!req.file){
-      return res.status(400).json({message:'No file uploaded'});
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const {originalname,mimetype,size,buffer} = req.file;
+    const { originalname, mimetype, size, buffer } = req.file;
 
     const fileBuffer = Buffer.isBuffer(buffer)
       ? buffer
@@ -239,33 +247,67 @@ app.post('/api/files/upload', authenticateToken, upload.single('file'), async (r
 
     res.json(result[0]);
 
-  }catch(err){
+  } catch (err) {
 
     console.error(err);
-    res.status(500).json({message:'Upload failed'});
+    res.status(500).json({ message: 'Upload failed' });
 
   }
 
 });
 
 // Get files
-app.get('/api/files', authenticateToken, async (req,res)=>{
+// FIX 4: Added try/catch to prevent unhandled crash on DB error
+app.get('/api/files', authenticateToken, async (req, res) => {
 
-  const files = await sql`
-  SELECT id,name,original_name,mime_type,size,uploaded_at
-  FROM files
-  WHERE user_id=${req.user.id}
-  ORDER BY uploaded_at DESC
-  `;
+  try {
 
-  res.json(files);
+    const files = await sql`
+    SELECT id,name,original_name,mime_type,size,uploaded_at
+    FROM files
+    WHERE user_id=${req.user.id}
+    ORDER BY uploaded_at DESC
+    `;
+
+    res.json(files);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+
+});
+
+// FIX 1 (CRITICAL): Moved /api/files/stats BEFORE /api/files/:id routes.
+// Express matches routes in order — if :id routes come first, "stats" is
+// treated as a file ID and this endpoint is never reached.
+
+// Stats
+app.get('/api/files/stats', authenticateToken, async (req, res) => {
+
+  try {
+
+    const stats = await sql`
+    SELECT
+    COUNT(*) as total_files,
+    COALESCE(SUM(size),0) as total_size
+    FROM files
+    WHERE user_id=${req.user.id}
+    `;
+
+    res.json(stats[0]);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 
 });
 
 // Download file
-app.get('/api/files/:id/download', authenticateToken, async (req,res)=>{
+app.get('/api/files/:id/download', authenticateToken, async (req, res) => {
 
-  try{
+  try {
 
     const files = await sql`
     SELECT
@@ -277,16 +319,30 @@ app.get('/api/files/:id/download', authenticateToken, async (req,res)=>{
     AND user_id=${req.user.id}
     `;
 
-    if(files.length===0){
-      return res.status(404).json({message:'File not found'});
+    if (files.length === 0) {
+      return res.status(404).json({ message: 'File not found' });
     }
 
     const file = files[0];
 
     let buffer = file.file_data;
 
-    if(typeof buffer === 'string'){
-      buffer = Buffer.from(buffer,'base64');
+    // Neon serverless returns BYTEA as { type: 'Buffer', data: [...] }
+    // Buffer.isBuffer() returns false for this plain object, so we must
+    // explicitly handle all three possible shapes:
+    if (Buffer.isBuffer(buffer)) {
+      // already a real Buffer — nothing to do
+    } else if (typeof buffer === 'string') {
+      // hex-encoded string (e.g. "\\x414243...")
+      buffer = buffer.startsWith('\\x')
+        ? Buffer.from(buffer.slice(2), 'hex')
+        : Buffer.from(buffer, 'base64');
+    } else if (buffer && buffer.type === 'Buffer' && Array.isArray(buffer.data)) {
+      // plain object from Neon: { type: 'Buffer', data: [47, 47, ...] }
+      buffer = Buffer.from(buffer.data);
+    } else {
+      // fallback: try to wrap whatever it is
+      buffer = Buffer.from(buffer);
     }
 
     res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
@@ -295,62 +351,55 @@ app.get('/api/files/:id/download', authenticateToken, async (req,res)=>{
 
     res.send(buffer);
 
-  }catch(err){
+  } catch (err) {
 
     console.error(err);
-    res.status(500).json({message:'Download failed'});
+    res.status(500).json({ message: 'Download failed' });
 
   }
 
 });
 
 // Delete file
-app.delete('/api/files/:id', authenticateToken, async (req,res)=>{
+// FIX 5: Added try/catch to prevent unhandled crash on DB error
+app.delete('/api/files/:id', authenticateToken, async (req, res) => {
 
-  const result = await sql`
-  DELETE FROM files
-  WHERE id=${req.params.id}
-  AND user_id=${req.user.id}
-  RETURNING id
-  `;
+  try {
 
-  if(result.length===0){
-    return res.status(404).json({message:'File not found'});
+    const result = await sql`
+    DELETE FROM files
+    WHERE id=${req.params.id}
+    AND user_id=${req.user.id}
+    RETURNING id
+    `;
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+
+    res.json({ message: 'File deleted' });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  res.json({message:'File deleted'});
-
-});
-
-// Stats
-app.get('/api/files/stats', authenticateToken, async (req,res)=>{
-
-  const stats = await sql`
-  SELECT
-  COUNT(*) as total_files,
-  COALESCE(SUM(size),0) as total_size
-  FROM files
-  WHERE user_id=${req.user.id}
-  `;
-
-  res.json(stats[0]);
 
 });
 
 // Health
-app.get('/health',(req,res)=>{
-  res.json({status:'OK',time:new Date()});
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', time: new Date() });
 });
 
 // =============================
 // START SERVER
 // =============================
 
-async function start(){
+async function start() {
 
   await initializeDatabase();
 
-  app.listen(PORT,()=>{
+  app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
 
